@@ -1,3 +1,9 @@
+/**
+ * Computes the coefficients of the Turan-type power series.
+ * 
+ * @author Parsiad Azimzadeh
+ */
+
 #include <stdlib.h>      // atoi
 
 #include <iostream>      // cerr, cout
