@@ -16,6 +16,8 @@ Pochhammer symbols appearing in ``${}_2F_1$`` are cached to speed up computation
 Usage
 -----
 
-First, run ``make``. Then,
+Run ``make`` to compile. Then, run
 
-``coefficients S_MIN S_MAX > log_file.txt``
+``./coefficients S_MIN S_MAX > log_file.txt``
+
+where ``S_MIN`` and ``S_MAX`` are the lower and upper bounds for ``S``, respectively.
