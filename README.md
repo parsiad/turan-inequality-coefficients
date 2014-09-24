@@ -13,4 +13,4 @@ Instead, we do this algebraically for a range of ``S`` values.
 The power series coefficients are computed precisely using GNU MP.
 Pochhammer symbols appearing in ``${}_2F_1$`` are cached to speed up computation, along with the use of multi-threading.
 
-usage: ``coefficients S_MIN S_MAX``
+usage: ``coefficients S_MIN S_MAX > log_file.txt``
