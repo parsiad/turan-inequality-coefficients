@@ -36,7 +36,7 @@ inline mpq_class pch(int m, unsigned n, pch_cache &c)
 	}
 
 	// Miss (perform calculation)
-	mpq_class p = m * pch(m+1, n-1, c);
+	mpq_class p( m * pch(m+1, n-1, c) );
 	c.emplace( make_pair( pch_key(m, n), p) );
 	return p;
 }
@@ -49,6 +49,6 @@ inline mpq_class pch(int m, unsigned n, pch_cache &c)
  */
 inline mpq_class pch_f(int m, unsigned n, pch_cache &c)
 {
-	return ((n % 2 == 0) ? -1 : 1) * pch(-m, n, c);
+	return ((n % 2 == 0) ? 1 : -1) * pch(-m, n, c);
 }
 

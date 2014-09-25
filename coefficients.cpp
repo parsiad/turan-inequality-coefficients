@@ -8,7 +8,9 @@
 
 #include <iostream>      // cerr, cout
 #include <memory>        // unique_ptr
+#include <mutex>         // mutex
 #include <sstream>       // stringstream
+#include <string>        // string
 #include <thread>        // thread
 #include <utility>       // make_pair
 
@@ -20,34 +22,69 @@
 using namespace std;
 
 void task(unsigned start, unsigned step, unsigned end, bool *fail,
-		stringstream *ss)
+		ostream *os, mutex *os_mutex)
 {
-	// TODO: Store results in another format
+	typedef unsigned long Z;
+	typedef mpq_class Q;
+
+	// TODO: Store results in a more efficient format?
 
 	// Thread-local cache (TODO: explore asynchronous structure)
 	pch_cache c;
 
-	for(unsigned S = start; S <= end; S+=step)
+	stringstream ss;
+
+	for(Z S = start; S <= end; S+=step)
 	{
-		for(unsigned m = 2; m < S; m++) // m = S is trivially zero
+		for(Z m = 2; m < S; m++) // m = S is trivially zero
 		{
 			// Log
-			*ss << "S=" << S << "\tm=" << m << "\t";
+			ss << "S=" << S << "\tm=" << m << "\t";
 
 			// Calculate the d-th power series coefficient
-			for(unsigned d = 1; d <= 2*m - 2; d++)
+			for(Z d = 1; d <= 2*m - 2; d++)
 			{
-				mpq_class sum;
-				sum = 0;
-				for(unsigned k = 0; k <= d; k++)
+				Q sum(0);
+
+				// k = 0 (slow)
+				//sum += (d+1) * (
+				//	          pch_f(m-1,d,c) / (     pch(2-m+S,d,c) )
+				//	- (d+2) * pch_f(m-2,d,c) / ( 2 * pch(3-m+S,d,c) )
+				//);
+
+				// k = 0 (fast)
+				sum += (d+1) * (
+					pch_f(m-2,d-1,c) / pch(3-m+S,d-1,c)
+					* ( (m-1)/Q(2-m+S) - (d+2)*(m-1-d)/(2*Q(2-m+S+d)) )
+				);
+
+				// 0 < k < d
+				for(Z k = 1; k < d; k++)
 				{
-					sum +=
-						  (d-k+1) * (k+1) * pch_f(m-1,d-k,c) * pch_f(m-1,k,c)
-								/ ( pch(2-m+S,d-k,c) * pch(2-m+S,k,c) )
-						- (d-k+1) * (d-k+2) * pch_f(m-2,d-k,c) * pch_f(m,k,c)
-								/ ( 2 * pch(1-m+S,k,c) * pch(3-m+S,d-k,c) )
-					;
+					// (slow)
+					//sum += (d-k+1) * (
+					//	  (  k+1) * pch_f(m-1,d-k,c) * pch_f(m-1,k,c) / (     pch(2-m+S,d-k,c) * pch(2-m+S,k,c) )
+					//	- (d-k+2) * pch_f(m-2,d-k,c) * pch_f(m  ,k,c) / ( 2 * pch(3-m+S,d-k,c) * pch(1-m+S,k,c) )
+					//);
+
+					// (fast)
+					sum += (d-k+1) * (
+						pch_f(m-2,d-k-1,c) * pch_f(m-1,k-1,c) / ( pch(3-m+S,d-k-1,c) * pch(2-m+S,k-1,c) )
+						* ( (k+1)*(m-1)*(m-k)/Q((2-m+S)*(1-m+S+k)) - (d-k+2)*(m-1-d+k)*m/Q(2*(2-m+S+d-k)*(1-m+S)) )
+					);
 				}
+
+				// k = d (slow)
+				//sum +=
+				//	(d+1) * pch_f(m-1,d,c) / pch(2-m+S,d,c)
+				//	      - pch_f(m  ,d,c) / pch(1-m+S,d,c)
+				//;
+
+				// k = d (fast)
+				sum +=
+					pch_f(m-1,d-1,c) / pch(2-m+S,d-1,c)
+					* ( (d+1)*(m-d)/Q(1-m+S+d) - m/Q(1-m+S) )
+				;
 
 				// Make sure the coefficient is nonnegative
 				if(sum < 0)
@@ -56,13 +93,26 @@ void task(unsigned start, unsigned step, unsigned end, bool *fail,
 				}
 
 				// Log
-				*ss << sum << " ";
+				ss << sum << " ";
 			}
 
 			// Log
-			*ss << endl;
+			ss << endl;
+		}
+
+		// Try to flush
+		if(os_mutex->try_lock())
+		{
+			(*os) << ss.str();
+			os_mutex->unlock();
+			ss.str(string());
 		}
 	}
+
+	// Flush remainder
+	os_mutex->lock();
+	(*os) << ss.str();
+	os_mutex->unlock();
 }
 
 int main(int argc, char **argv)
@@ -85,51 +135,49 @@ int main(int argc, char **argv)
 	// Number of threads to make
 	unsigned n = thread::hardware_concurrency();
 
+	// Mutex
+	mutex os_mutex;
+
 	// Launch threads
 	unique_ptr<bool[]> fails(new bool[n]);
-	unique_ptr<stringstream[]> ss(new stringstream[n]);
 	unique_ptr<unique_ptr<thread>[]> threads(new unique_ptr<thread>[n-1]);
 	for(unsigned i = 0; i < n-1; i++)
 	{
 		fails[i] = false;
-		threads[i] = unique_ptr<thread>(
-				new thread {task, S_min+i, n, S_max, &fails[i],
-				&ss[i]} );
+		threads[i] = unique_ptr<thread>(new thread {
+			task,
+			S_min+i, n, S_max,
+			&fails[i],
+			&cout, &os_mutex
+		});
 	}
 
 	// Main thread
 	fails[n-1] = false;
-	task(S_min+(n-1), n, S_max, &fails[n-1], &ss[n-1]);
+	task(
+		S_min+(n-1), n, S_max,
+		&fails[n-1],
+		&cout, &os_mutex
+	);
 
-	// TODO: Main thread should also poll every once in a while to see if
-	//       execution should stop
-
-	// Join and check
-	bool fail = false;
+	// Join
 	for(unsigned i = 0; i < n-1; i++)
 	{
 		threads[i]->join();
+	}
+
+	// Check
+	cout << endl;
+	for(unsigned i = 0; i < n; i++)
+	{
 		if(fails[i])
 		{
-			fail = true;
-			break;
+			cout << "one or more coefficients negative" << endl;
+			return 0;
 		}
 	}
 
-	// Main thread check
-	if(fails[n-1])
-	{
-		fail = true;
-	}
-
-	// Write to stdout
-	cout << (fail ? "one or more coefficients negative" :
-			"all coefficients nonnegative") << endl << endl;
-	for(unsigned i = 0; i < n; i++)
-	{
-		cout << ss[i].str();
-	}
-
+	cout << "all coefficients nonnegative" << endl;
 	return 0;
 }
 
