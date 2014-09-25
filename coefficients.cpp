@@ -1,5 +1,6 @@
 /**
- * Computes the coefficients of the Turan-type power series.
+ * Computes the coefficients of the Turan-type power series
+ * $${}_2F_1(2,-m+1;S-m+2;-x){}^2 - {}_2F_1(1,-m;S-m+1;-x) {}_2F_1(3,-m+2;S-m+3;-x) = \sum_{n=0}^{\infty} \varphi_n x^n$$
  *
  * @author Parsiad Azimzadeh
  */
@@ -27,9 +28,8 @@ void task(unsigned start, unsigned step, unsigned end, bool *fail,
 	typedef unsigned long Z;
 	typedef mpq_class Q;
 
-	// TODO: Store results in a more efficient format?
-
-	// Thread-local cache (TODO: explore asynchronous structure)
+	// TODO: replace this with Cliff Click's hashtable and share it across
+	//       threads
 	pch_cache c;
 
 	stringstream ss;
@@ -87,10 +87,7 @@ void task(unsigned start, unsigned step, unsigned end, bool *fail,
 				;
 
 				// Make sure the coefficient is nonnegative
-				if(sum < 0)
-				{
-					*fail = true;
-				}
+				if(sum < 0) { *fail = true; }
 
 				// Log
 				ss << sum << " ";
@@ -121,11 +118,13 @@ int main(int argc, char **argv)
 	unsigned S_min, S_max;
 	{
 		int tmp_min, tmp_max;
-		if( argc != 3 || (tmp_min = atoi(argv[1])) < 2
-				|| (tmp_max = atoi(argv[2])) < tmp_min )
+		if(
+			argc != 3
+			|| (tmp_min = atoi(argv[1])) < 2
+			|| (tmp_max = atoi(argv[2])) < tmp_min
+		)
 		{
-			cerr << "usage: coefficients S_MIN S_MAX (where 2 <= S_MIN <= S_MAX)"
-					<< endl;
+			cerr << "usage: coefficients S_MIN S_MAX (where 2 <= S_MIN <= S_MAX)" << endl;
 			return 1;
 		}
 		S_min = (unsigned) tmp_min;
@@ -161,10 +160,7 @@ int main(int argc, char **argv)
 	);
 
 	// Join
-	for(unsigned i = 0; i < n-1; i++)
-	{
-		threads[i]->join();
-	}
+	for(unsigned i = 0; i < n-1; i++) { threads[i]->join(); }
 
 	// Check
 	cout << endl;
