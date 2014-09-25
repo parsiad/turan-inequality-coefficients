@@ -1,6 +1,6 @@
 /**
  * Computes the coefficients of the Turan-type power series.
- * 
+ *
  * @author Parsiad Azimzadeh
  */
 
@@ -22,6 +22,8 @@ using namespace std;
 void task(unsigned start, unsigned step, unsigned end, bool *fail,
 		stringstream *ss)
 {
+	// TODO: Store results in another format
+
 	// Thread-local cache (TODO: explore asynchronous structure)
 	pch_cache c;
 
@@ -72,7 +74,7 @@ int main(int argc, char **argv)
 		if( argc != 3 || (tmp_min = atoi(argv[1])) < 2
 				|| (tmp_max = atoi(argv[2])) < tmp_min )
 		{
-			cerr << "usage: turan_inequality S_MIN S_MAX (where 2 <= S_MIN <= S_MAX)"
+			cerr << "usage: coefficients S_MIN S_MAX (where 2 <= S_MIN <= S_MAX)"
 					<< endl;
 			return 1;
 		}
