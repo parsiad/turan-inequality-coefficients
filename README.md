@@ -1,7 +1,7 @@
 turan-inequality-coefficients
 =============================
 
-It is nontrivial to show that for integers ``m`` and ``S`` with ``1 <= m <= S``, the power-series
+It is nontrivial to show that for integers ``m`` and ``S`` with ``2 <= m <= S``, the power-series
 
 ![turan-inequality-coefficients power_series](https://raw.githubusercontent.com/parsiad/turan-inequality-coefficients/gh-pages/power_series.png "Power Series")
 
